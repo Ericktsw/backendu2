@@ -4,10 +4,13 @@ const fs = require('fs');
 const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
 const cors = require('cors');
+const ffmpegPath = require('ffmpeg-static');
+
+ffmpeg.setFfmpegPath(ffmpegPath);
 
 const app = express();
-app.use(cors());
-app.use(express.json({ limit: '100mb' })); // para base64 grande
+app.use(cors({ origin: '*' }));
+app.use(express.json({ limit: '100mb' }));
 
 const OUTPUT_DIR = path.join(__dirname, 'videos');
 if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR);
@@ -18,17 +21,13 @@ app.post('/render', async (req, res) => {
     const folder = path.join(OUTPUT_DIR, String(timestamp));
     fs.mkdirSync(folder);
 
-    const framePaths = [];
     try {
-        // Salvar frames como imagens
         for (let i = 0; i < frames.length; i++) {
             const base64Data = frames[i].replace(/^data:image\/(png|jpeg);base64,/, '');
             const filePath = path.join(folder, `frame_${i.toString().padStart(4, '0')}.png`);
             fs.writeFileSync(filePath, base64Data, 'base64');
-            framePaths.push(filePath);
         }
 
-        // Gerar vídeo com FFmpeg
         const outputPath = path.join(folder, `output.${format}`);
         await new Promise((resolve, reject) => {
             ffmpeg()
@@ -44,7 +43,7 @@ app.post('/render', async (req, res) => {
         res.json({ url: `/videos/${timestamp}/output.${format}` });
     } catch (err) {
         console.error(err);
-        res.status(500).send('Erro ao gerar vídeo');
+        res.status(500).json({ error: 'Erro ao gerar vídeo' });
     }
 });
 
