@@ -22,6 +22,12 @@ app.post('/render', async (req, res) => {
     fs.mkdirSync(folder);
 
     try {
+        console.log("Iniciando renderização com os seguintes dados:");
+        console.log("Quantidade de frames:", frames.length);
+        console.log("FPS:", fps);
+        console.log("Formato:", format);
+        console.log("Pasta temporária:", folder);
+
         for (let i = 0; i < frames.length; i++) {
             const base64Data = frames[i].replace(/^data:image\/(png|jpeg);base64,/, '');
             const filePath = path.join(folder, `frame_${i.toString().padStart(4, '0')}.png`);
@@ -36,14 +42,17 @@ app.post('/render', async (req, res) => {
                 .outputFPS(fps)
                 .output(outputPath)
                 .on('end', resolve)
-                .on('error', reject)
+                .on('error', (err) => {
+                    console.error("Erro no FFmpeg:", err.message);
+                    reject(err);
+                })
                 .run();
         });
 
         res.json({ url: `/videos/${timestamp}/output.${format}` });
     } catch (err) {
-        console.error(err);
-        res.status(500).json({ error: 'Erro ao gerar vídeo' });
+        console.error("Erro ao gerar vídeo:", err);
+        res.status(500).json({ error: 'Erro ao gerar vídeo', details: err.message });
     }
 });
 
